@@ -9,7 +9,9 @@ import android.util.Log;
 
 import com.facebook.react.ReactApplication;
 import com.facebook.react.ReactInstanceManager;
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactContext;
+import com.facebook.react.bridge.WritableMap;
 
 public class AlarmRun extends BroadcastReceiver {
     /**
@@ -20,7 +22,9 @@ public class AlarmRun extends BroadcastReceiver {
     public static void fire(ReactContext reactContext, String alarmName) {
         if(reactContext.hasActiveCatalystInstance()) {
             Log.i("RNAlarms", "Firing alarm '" + alarmName + "'");
-            reactContext.getJSModule(AlarmEmitter.class).emit(alarmName, null);
+            WritableMap map = Arguments.createMap();
+            map.putString("alarmName", alarmName);
+            reactContext.getJSModule(AlarmEmitter.class).emit("alarmFired", map);
         } else {
             Log.i("RNAlarms", "no active catalyst instance; not firing alarm '" + alarmName + "'");
         }
@@ -43,7 +47,7 @@ public class AlarmRun extends BroadcastReceiver {
                     manager.addReactInstanceEventListener(new ReactInstanceManager.ReactInstanceEventListener() {
                         public void onReactContextInitialized(ReactContext context) {
                             Log.i("RNAlarms", "Attempting to fire alarm '" + alarmName + "'");
-                           fire(context, alarmName);
+                            fire(context, alarmName);
                         }
                     });
                     if(!manager.hasStartedCreatingInitialContext()) {
