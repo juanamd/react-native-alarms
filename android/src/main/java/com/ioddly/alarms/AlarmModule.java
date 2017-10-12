@@ -5,6 +5,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -155,7 +156,10 @@ public class AlarmModule extends ReactContextBaseJavaModule {
       int interval = opts.getInt("interval");
       manager.setInexactRepeating(type, ms, interval, pending);
     } else {
-      manager.set(type, ms, pending);
+      //if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) manager.setExactAndAllowWhileIdle(type, ms, pending); // No system display
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) manager.setAlarmClock(new AlarmManager.AlarmClockInfo(ms, pending), pending);
+      else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) manager.setExact(type, ms, pending);
+      else manager.set(type, ms, pending);
     }
   }
 
@@ -176,4 +180,3 @@ public class AlarmModule extends ReactContextBaseJavaModule {
     jClearAlarm(name);
   }
 }
-
