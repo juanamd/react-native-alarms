@@ -18,6 +18,7 @@ import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.module.annotations.ReactModule;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -127,20 +128,14 @@ public class AlarmModule extends ReactContextBaseJavaModule {
     } else {
       Calendar calendar = Calendar.getInstance();
       calendar.setTimeInMillis(System.currentTimeMillis());
-      if(opts.hasKey("date")) {
-        calendar.set(Calendar.DATE, opts.getInt("date"));
-      }
-      if(opts.hasKey("hour")) {
-        calendar.set(Calendar.HOUR_OF_DAY, opts.getInt("hour"));
-      }
-      if(opts.hasKey("minute")) {
-        calendar.set(Calendar.MINUTE, opts.getInt("minute"));
-      }
-      if(opts.hasKey("second")) {
-        calendar.set(Calendar.SECOND, opts.getInt("second"));
-      }
+      if(opts.hasKey("year")) calendar.set(Calendar.YEAR, opts.getInt("year"));
+      if(opts.hasKey("month")) calendar.set(Calendar.MONTH, opts.getInt("month"));
+      if(opts.hasKey("date")) calendar.set(Calendar.DATE, opts.getInt("date"));
+      if(opts.hasKey("hour")) calendar.set(Calendar.HOUR_OF_DAY, opts.getInt("hour"));
+      if(opts.hasKey("minute")) calendar.set(Calendar.MINUTE, opts.getInt("minute"));
+      if(opts.hasKey("second")) calendar.set(Calendar.SECOND, opts.getInt("second"));
       ms = calendar.getTimeInMillis();
-      Log.i("RNAlarms", "RTC" + wakeup + repeating_s + " " +name + " at date: " + calendar.get(Calendar.DATE) + " - h:m:s "+ calendar.get(Calendar.HOUR_OF_DAY) + ":" + calendar.get(Calendar.MINUTE) + ":" + calendar.get(Calendar.SECOND));
+      Log.i("RNAlarms", "RTC" + wakeup + repeating_s + " " + name + " at: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(calendar.getTime()));
     }
 
     PendingIntent pending;
