@@ -49,7 +49,14 @@ const alarmSetRTC = (name, date, interval, wakeup) => {
   if(interval && typeof interval != 'number')
     throw new Error(`${prefix} third argument interval, if provided, must be a number or one of the provided constants`);
 
-  let opts = { date: date.getDate(), minute: date.getMinutes(), hour: date.getHours(), second: date.getSeconds() };
+  let opts = {
+    year: date.getFullYear(),
+    month: date.getMonth(),
+    date: date.getDate(),
+    minute: date.getMinutes(),
+    hour: date.getHours(),
+    second: date.getSeconds()
+  };
   if(interval) {
     opts.interval = interval;
   }
