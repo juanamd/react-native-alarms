@@ -25,7 +25,7 @@ public class AlarmHelper {
 
         Log.e("RNAlarms", "starting activity " + klass.getCanonicalName());
         Intent mainintent = new Intent(context, klass);
-        mainintent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        mainintent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         context.startActivity(mainintent);
     }
 }
