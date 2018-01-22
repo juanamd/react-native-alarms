@@ -3,8 +3,6 @@ package com.ioddly.alarms;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 
 import com.facebook.react.ReactApplication;
@@ -19,7 +17,7 @@ public class AlarmRun extends BroadcastReceiver {
      * @param reactContext
      * @param alarmName
      */
-    public static void fire(ReactContext reactContext, String alarmName) {
+    public static void emitJSAlarmEvent(ReactContext reactContext, final String alarmName) {
         if(reactContext.hasActiveCatalystInstance()) {
             Log.i("RNAlarms", "Firing alarm '" + alarmName + "'");
             WritableMap map = Arguments.createMap();
@@ -30,31 +28,42 @@ public class AlarmRun extends BroadcastReceiver {
         }
     }
 
-    public void onReceive(final Context context, Intent intent) {
-        Handler handler = new Handler(Looper.getMainLooper());
-
-        final String alarmName = intent.getStringExtra("name");
-        handler.post(new Runnable() {
-            public void run() {
-                ReactApplication reapp = ((ReactApplication) context.getApplicationContext());
-                ReactInstanceManager manager = reapp.getReactNativeHost().getReactInstanceManager();
-                ReactContext recontext = manager.getCurrentReactContext();
-                if(recontext != null) {
-                    Log.i("RNAlarms", "Attempting to fire alarm '" + alarmName + "'");
-                    fire(recontext, alarmName);
-                } else {
-                    Log.i("RNAlarms", "Application is closed; attempting to launch and fire alarm '" + alarmName + "'");
-                    manager.addReactInstanceEventListener(new ReactInstanceManager.ReactInstanceEventListener() {
-                        public void onReactContextInitialized(ReactContext context) {
-                            Log.i("RNAlarms", "Attempting to fire alarm '" + alarmName + "'");
-                            fire(context, alarmName);
-                        }
-                    });
-                    if(!manager.hasStartedCreatingInitialContext()) {
-                        manager.createReactContextInBackground();
-                    }
-                }
-            }
-        });
+	@Override
+	public void onReceive(final Context context, Intent intent) {
+		if(isAlarmIntent(intent)) AlarmHelper.launchMainActivity(context);
+		prepareJSListeners(context, intent);
     }
+
+	private boolean isAlarmIntent(Intent intent) {
+		return !intent.getAction().contains("android.intent.action");
+	}
+
+	private void prepareJSListeners(final Context context, Intent intent) {
+		final String alarmName = intent.hasExtra("name") ? intent.getStringExtra("name") : "@boot";
+		ReactApplication reactApp = ((ReactApplication) context.getApplicationContext());
+		ReactInstanceManager reactManager = reactApp.getReactNativeHost().getReactInstanceManager();
+		ReactContext reactContext = reactManager.getCurrentReactContext();
+		if(reactContext != null) {
+			Log.i("RNAlarms", "Attempting to fire alarm '" + alarmName + "'");
+			emitJSAlarmEvent(reactContext, alarmName);
+		} else {
+			addReactNativeInitializedListener(reactManager, alarmName);
+			createReactContextIfNecessary(reactManager);
+		}
+	}
+
+	private void addReactNativeInitializedListener(ReactInstanceManager reactManager, final String alarmName) {
+		Log.i("RNAlarms", "Application is closed; attempting to launch and fire alarm '" + alarmName + "'");
+		reactManager.addReactInstanceEventListener(new ReactInstanceManager.ReactInstanceEventListener() {
+			public void onReactContextInitialized(ReactContext reactContext) {
+				Log.i("RNAlarms", "Attempting to fire alarm '" + alarmName + "'");
+				emitJSAlarmEvent(reactContext, alarmName);
+			}
+		});
+	}
+
+	private void createReactContextIfNecessary(ReactInstanceManager reactManager) {
+		if(!reactManager.hasStartedCreatingInitialContext()) reactManager.createReactContextInBackground();
+	}
+
 }
