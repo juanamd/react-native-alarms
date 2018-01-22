@@ -12,27 +12,27 @@ import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.WritableMap;
 
 public class AlarmRun extends BroadcastReceiver {
-    /**
-     * Fires alarm after ReactContext has been obtained
-     * @param reactContext
-     * @param alarmName
-     */
-    public static void emitJSAlarmEvent(ReactContext reactContext, final String alarmName) {
-        if(reactContext.hasActiveCatalystInstance()) {
-            Log.i("RNAlarms", "Firing alarm '" + alarmName + "'");
-            WritableMap map = Arguments.createMap();
-            map.putString("alarmName", alarmName);
-            reactContext.getJSModule(AlarmEmitter.class).emit("alarmFired", map);
-        } else {
-            Log.i("RNAlarms", "no active catalyst instance; not firing alarm '" + alarmName + "'");
-        }
-    }
+	/**
+	 * Fires alarm after ReactContext has been obtained
+	 * @param reactContext
+	 * @param alarmName
+	 */
+	public static void emitJSAlarmEvent(ReactContext reactContext, final String alarmName) {
+		if(reactContext.hasActiveCatalystInstance()) {
+			Log.i("RNAlarms", "Firing alarm '" + alarmName + "'");
+			WritableMap map = Arguments.createMap();
+			map.putString("alarmName", alarmName);
+			reactContext.getJSModule(AlarmEmitter.class).emit("alarmFired", map);
+		} else {
+			Log.i("RNAlarms", "no active catalyst instance; not firing alarm '" + alarmName + "'");
+		}
+	}
 
 	@Override
 	public void onReceive(final Context context, Intent intent) {
 		if(isAlarmIntent(intent)) AlarmHelper.launchMainActivity(context);
 		prepareJSListeners(context, intent);
-    }
+	}
 
 	private boolean isAlarmIntent(Intent intent) {
 		return !intent.getAction().contains("android.intent.action");
