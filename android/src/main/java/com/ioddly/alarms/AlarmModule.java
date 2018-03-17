@@ -14,164 +14,153 @@ import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
-import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.module.annotations.ReactModule;
 
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
 @ReactModule(name = "AlarmAndroid")
 public class AlarmModule extends ReactContextBaseJavaModule {
-  public AlarmModule(ReactApplicationContext reactContext) {
-    super(reactContext);
-    Log.i("RNAlarms", "AlarmModule initialized");
-  }
+	
+	public AlarmModule(ReactApplicationContext reactContext) {
+		super(reactContext);
+		Log.i("RNAlarms", "AlarmModule initialized");
+	}
 
-  @Override
-  public String getName() {
-    return "AlarmAndroid";
-  }
+	@ReactMethod
+	public void setElapsedRealtime(final String alarmName, final int triggerMillis, final int intervalMillis) {
+		long alarmMillis = SystemClock.elapsedRealtime() + triggerMillis;
+		this.setAlarm(AlarmManager.ELAPSED_REALTIME, alarmName, alarmMillis, intervalMillis);
 
-  @Override
-  /**
-   * Return constants for use in JS code
-   */
-  public Map<String, Object> getConstants() {
-    final Map<String, Object> constants = new HashMap<>();
+		Log.i("RNAlarms", "setElapsedRealtime. Name: " + alarmName + ", interval: " + intervalMillis + ", millis: " + alarmMillis);
+	}
 
-    constants.put("RTC", AlarmManager.RTC);
-    constants.put("RTC_WAKEUP", AlarmManager.RTC_WAKEUP);
-    constants.put("ELAPSED_REALTIME", AlarmManager.ELAPSED_REALTIME);
-    constants.put("ELAPSED_REALTIME_WAKEUP", AlarmManager.ELAPSED_REALTIME_WAKEUP);
+	@ReactMethod
+	public void setElapsedRealtimeWakeup(final String alarmName, final int triggerMillis, final int intervalMillis) {
+		long alarmMillis = SystemClock.elapsedRealtime() + triggerMillis;
+		this.setAlarm(AlarmManager.ELAPSED_REALTIME_WAKEUP, alarmName, alarmMillis, intervalMillis);
 
-    constants.put("INTERVAL_FIFTEEN_MINUTES", AlarmManager.INTERVAL_FIFTEEN_MINUTES);
-    constants.put("INTERVAL_HALF_HOUR", AlarmManager.INTERVAL_HALF_HOUR);
-    constants.put("INTERVAL_HOUR", AlarmManager.INTERVAL_HOUR);
-    constants.put("INTERVAL_DAY", AlarmManager.INTERVAL_DAY);
-    constants.put("INTERVAL_HALF_DAY", AlarmManager.INTERVAL_HALF_DAY);
+		Log.i("RNAlarms", "setElapsedRealtimeWakeup. Name: " + alarmName + ", interval: " + intervalMillis + ", millis: " + alarmMillis);
+	}
 
-    return constants;
-  }
+	@ReactMethod
+	public void setRTC(final String alarmName, final String alarmMillisString, final int intervalMillis) {
+		long alarmMillis = Long.parseLong(alarmMillisString, 10);
+		this.setAlarm(AlarmManager.RTC, alarmName, alarmMillis, intervalMillis);
 
-  /**
-   * Creates a PendingIntent for an alarm
-   * @param name Name of the alarm
-   * @param flags PendingIntent flags
-   * @return
-   */
-  private PendingIntent createPending(final String name, final int flags) {
-    Context context = getReactApplicationContext();
-    Intent intent = new Intent(context, AlarmRun.class);
-    intent.putExtra("name", name);
-    // This is so alarms may be cancelled
-    intent.setAction(name);
-    intent.setData(Uri.parse("http://"+name));
-    return PendingIntent.getBroadcast(context, 0, intent, flags);
-  }
+		String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(alarmMillis);
+		Log.i("RNAlarms", "setRTC. Name: " + alarmName + ", interval: " + intervalMillis + " at: " + date);
+	}
 
-  /**
-   * Check if an alarm exists
-   * @param name Alarm name
-   * @return true if alarm exists
-   */
-  private boolean jAlarmExists(final String name) {
-    return createPending(name, PendingIntent.FLAG_NO_CREATE) != null;
-  }
+	@ReactMethod
+	public void setRTCWakeup(final String alarmName, final String alarmMillisString, final int intervalMillis) {
+		long alarmMillis = Long.parseLong(alarmMillisString, 10);
+		this.setAlarm(AlarmManager.RTC_WAKEUP, alarmName, alarmMillis, intervalMillis);
 
-  /** Clear an alarm by name */
-  private void jClearAlarm(final String name) {
-    PendingIntent pending = createPending(name, PendingIntent.FLAG_NO_CREATE);
-    if(pending != null) {
-      pending.cancel();
-      ((AlarmManager) getReactApplicationContext().getSystemService(Context.ALARM_SERVICE)).cancel(pending);
-    } else {
-      Log.i("RNAlarms", "No PendingIntent found for alarm '"+name+"'");
-    }
-  }
+		String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(alarmMillis);
+		Log.i("RNAlarms", "setRTCWakeup. Name: " + alarmName + ", interval: " + intervalMillis + " at: " + date);
+	}
 
-  @ReactMethod
-  /**
-   * React method: Check if an alarm exists.
-   * @param name Alarm name
-   * @param promise JS promise
-   */
-  public void alarmExists(final String name, final Promise promise) {
-      WritableArray args =  Arguments.createArray();
-      args.pushBoolean(jAlarmExists(name));
-      promise.resolve(args);
-  }
+	private void setAlarm(final int type, final String alarmName, final long alarmMillis, final int intervalMillis) {
+		PendingIntent pending = this.getAlarmPendingIntent(alarmName);
+		if (intervalMillis != 0) this.setRepeatingAlarm(type, alarmMillis, intervalMillis, pending);
+		else this.setNonRepeatingAlarm(type, alarmMillis, pending);
+	}
 
-  /**
-   * Set a new alarm
-   * @param name Alarm name
-   * @param type Android alarm type
-   * @param opts Options
-   */
-  @ReactMethod
-  public void setAlarm(final String name, final int type, final ReadableMap opts) {
-    boolean repeating = opts.hasKey("interval");
-    Context context = getReactApplicationContext();
+	private PendingIntent getAlarmPendingIntent(final String alarmName) {
+		if(isExistingAlarm(alarmName)) {
+			Log.i("RNAlarms", "PendingIntent already exists for alarm '" + alarmName + "'; updating!");
+			this.clearAlarm(alarmName);
+			return createPending(alarmName, PendingIntent.FLAG_UPDATE_CURRENT);
+		} else {
+			return createPending(alarmName, 0);
+		}
+	}
 
-    AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+	private void setRepeatingAlarm(int type, long alarmMillis, int intervalMillis, PendingIntent pending) {
+		AlarmManager alarmManager = this.getAlarmManager();
+		alarmManager.setInexactRepeating(type, alarmMillis, intervalMillis, pending);
+	}
 
-    long ms = 0;
+	private void setNonRepeatingAlarm(int type, long alarmMillis, PendingIntent pending) {
+		AlarmManager alarmManager = this.getAlarmManager();
 
-    String wakeup = (type == AlarmManager.ELAPSED_REALTIME_WAKEUP || type == AlarmManager.RTC_WAKEUP) ? "_WAKEUP" : "";
-    String repeating_s = repeating ? " (repeating every "+opts.getInt("interval")+"ms) " : "";
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+			alarmManager.setAlarmClock(new AlarmManager.AlarmClockInfo(alarmMillis, pending), pending);
+		} else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+			alarmManager.setExact(type, alarmMillis, pending);
+		} else {
+			alarmManager.set(type, alarmMillis, pending);
+		}
+	}
 
-    if(type == AlarmManager.ELAPSED_REALTIME || type == AlarmManager.ELAPSED_REALTIME_WAKEUP) {
-      ms = SystemClock.elapsedRealtime() + opts.getInt("trigger");
-      Log.i("RNAlarms", "ELAPSED_REALTIME"+ wakeup + " " + repeating_s + "ALARM '"+name+"' in " + opts.getInt("trigger") + "ms");
-    } else {
-      Calendar calendar = Calendar.getInstance();
-      calendar.setTimeInMillis(System.currentTimeMillis());
-      if(opts.hasKey("year")) calendar.set(Calendar.YEAR, opts.getInt("year"));
-      if(opts.hasKey("month")) calendar.set(Calendar.MONTH, opts.getInt("month"));
-      if(opts.hasKey("date")) calendar.set(Calendar.DATE, opts.getInt("date"));
-      if(opts.hasKey("hour")) calendar.set(Calendar.HOUR_OF_DAY, opts.getInt("hour"));
-      if(opts.hasKey("minute")) calendar.set(Calendar.MINUTE, opts.getInt("minute"));
-      if(opts.hasKey("second")) calendar.set(Calendar.SECOND, opts.getInt("second"));
-      ms = calendar.getTimeInMillis();
-      Log.i("RNAlarms", "RTC" + wakeup + repeating_s + " " + name + " at: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(calendar.getTime()));
-    }
+	private AlarmManager getAlarmManager() {
+		Context context = this.getReactApplicationContext();
+		return (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+	}
 
-    PendingIntent pending;
-    if(jAlarmExists(name)) {
-      Log.i("RNAlarms", "PendingIntent already exists for alarm '"+name+"'; updating!");
-      jClearAlarm(name);
-      pending = createPending(name, PendingIntent.FLAG_UPDATE_CURRENT);
-    } else {
-      pending = createPending(name, 0);
-    }
+	@ReactMethod
+	public void alarmExists(final String alarmName, final Promise promise) {
+		WritableArray args =  Arguments.createArray();
+		args.pushBoolean(isExistingAlarm(alarmName));
+		promise.resolve(args);
+	}
 
-    if(repeating) {
-      int interval = opts.getInt("interval");
-      manager.setInexactRepeating(type, ms, interval, pending);
-    } else {
-      //if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) manager.setExactAndAllowWhileIdle(type, ms, pending); // No system display
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) manager.setAlarmClock(new AlarmManager.AlarmClockInfo(ms, pending), pending);
-      else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) manager.setExact(type, ms, pending);
-      else manager.set(type, ms, pending);
-    }
-  }
+	private boolean isExistingAlarm(final String alarmName) {
+		return this.createPending(alarmName, PendingIntent.FLAG_NO_CREATE) != null;
+	}
 
-  /** Find and launch the main activity */
-  @ReactMethod
-  public void launchMainActivity() {
-    AlarmHelper.launchMainActivity(getReactApplicationContext());
-  }
+	@ReactMethod
+	public void clearAlarm(final String alarmName) {
+		Log.i("RNAlarms", "Clearing alarm '" + alarmName + "'");
+		PendingIntent pending = this.createPending(alarmName, PendingIntent.FLAG_NO_CREATE);
+		if(pending != null) {
+			pending.cancel();
+			AlarmManager alarmManager = this.getAlarmManager();
+			alarmManager.cancel(pending);
+		} else {
+			Log.i("RNAlarms", "No PendingIntent found for alarm '" + alarmName + "'");
+		}
+	}
 
+	private PendingIntent createPending(final String alarmName, final int flags) {
+		Context context = this.getReactApplicationContext();
+		Intent intent = new Intent(context, AlarmRun.class);
+		intent.putExtra("name", alarmName);
+		// This is so alarms may be cancelled
+		intent.setAction(alarmName);
+		intent.setData(Uri.parse("id://" + alarmName));
+		return PendingIntent.getBroadcast(context, 0, intent, flags);
+	}
 
-  /**
-   * Clear an existing alarm
-   * @param name Alarm name
-   */
-  @ReactMethod
-  public void clearAlarm(String name) {
-    Log.i("RNAlarms", "Clearing alarm '"+name+"'");
-    jClearAlarm(name);
-  }
+	@ReactMethod
+	public void launchMainActivity() {
+		AlarmHelper.launchMainActivity(this.getReactApplicationContext());
+	}
+
+	@Override
+	public String getName() {
+		return "AlarmAndroid";
+	}
+
+	@Override
+	public Map<String, Object> getConstants() {
+		final Map<String, Object> constants = new HashMap<>();
+
+		constants.put("RTC", AlarmManager.RTC);
+		constants.put("RTC_WAKEUP", AlarmManager.RTC_WAKEUP);
+		constants.put("ELAPSED_REALTIME", AlarmManager.ELAPSED_REALTIME);
+		constants.put("ELAPSED_REALTIME_WAKEUP", AlarmManager.ELAPSED_REALTIME_WAKEUP);
+
+		constants.put("INTERVAL_FIFTEEN_MINUTES", AlarmManager.INTERVAL_FIFTEEN_MINUTES);
+		constants.put("INTERVAL_HALF_HOUR", AlarmManager.INTERVAL_HALF_HOUR);
+		constants.put("INTERVAL_HOUR", AlarmManager.INTERVAL_HOUR);
+		constants.put("INTERVAL_DAY", AlarmManager.INTERVAL_DAY);
+		constants.put("INTERVAL_HALF_DAY", AlarmManager.INTERVAL_HALF_DAY);
+
+		return constants;
+	}
+
 }

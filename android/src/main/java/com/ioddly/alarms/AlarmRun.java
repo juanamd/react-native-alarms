@@ -10,6 +10,7 @@ import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 public class AlarmRun extends BroadcastReceiver {
 	
@@ -23,19 +24,19 @@ public class AlarmRun extends BroadcastReceiver {
 	@Override
 	public void onReceive(final Context context, Intent intent) {
 		this.alarmName = intent.hasExtra("name") ? intent.getStringExtra("name") : BOOT_EVENT;
-		this.reactManager = getReactManager(context);
+		this.reactManager = this.getReactManager(context);
 		this.reactContext = reactManager.getCurrentReactContext();
-		if(isAlarmIntent(intent)) AlarmHelper.launchMainActivity(context);
-		prepareJSListeners();
-	}
 
-	public void onReactContextInitialized(ReactContext reactContext) {
-		this.reactContext = reactContext;
-		emitJSAlarmEvent();
+		if(this.isAlarmIntent(intent)) AlarmHelper.launchMainActivity(context);
+		if(this.isReactContextReady()) this.emitJSAlarmEvent();
+		else {
+			this.addReactNativeInitializedListener();
+			this.createReactContextIfNecessary();
+		}
 	}
 
 	private ReactInstanceManager getReactManager(final Context context) {
-		ReactApplication reactApp = ((ReactApplication) context.getApplicationContext());
+		ReactApplication reactApp = (ReactApplication) context.getApplicationContext();
 		return reactApp.getReactNativeHost().getReactInstanceManager();
 	}
 
@@ -43,19 +44,15 @@ public class AlarmRun extends BroadcastReceiver {
 		return !intent.getAction().contains("android.intent.action");
 	}
 
-	private void prepareJSListeners() {
-		if(this.reactContext != null) emitJSAlarmEvent();
-		else {
-			addReactNativeInitializedListener();
-			createReactContextIfNecessary();
-		}
+	private boolean isReactContextReady() {
+		return (this.reactContext != null && this.reactContext.hasActiveCatalystInstance());
 	}
 
 	private void emitJSAlarmEvent() {
-		if(this.reactContext.hasActiveCatalystInstance()) {
-			Log.i("RNAlarms", "Firing alarm '" + this.alarmName + "'");
-			this.reactContext.getJSModule(AlarmEmitter.class).emit(ALARM_FIRED_EVENT, createEventMap());
-		} else Log.i("RNAlarms", "no active catalyst instance; not firing alarm '" + this.alarmName + "'");
+		Log.i("RNAlarms", "Firing alarm '" + this.alarmName + "'");
+		this.reactContext
+			.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+			.emit(ALARM_FIRED_EVENT, this.createEventMap());
 	}
 
 	private WritableMap createEventMap() {
@@ -72,6 +69,20 @@ public class AlarmRun extends BroadcastReceiver {
 				self.onReactContextInitialized(reactContext);
 			}
 		});
+	}
+
+	public void onReactContextInitialized(ReactContext reactContext) {
+		this.reactContext = reactContext;
+		if(this.isReactContextReady()) this.emitJSAlarmEvent();
+		else {
+			//Wait 2 seconds and try again
+			try {
+				Thread.sleep(2000);
+				if(this.isReactContextReady()) this.emitJSAlarmEvent();
+			} catch(Exception exception) {
+				Thread.currentThread().interrupt();
+			}
+		}
 	}
 
 	private void createReactContextIfNecessary() {

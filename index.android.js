@@ -20,15 +20,15 @@ const alarmSetElapsedRealtime = (name, trigger, interval, wakeup) => {
   let prefix = `RNAlarms: alarmSetElapsedRealtime${wakeup ? 'Wakeup' : ''}: `;
 
   if(!(typeof name === 'string' || name instanceof String))
-    throw new Error(`${prefix} first argument name must be a string`);
+	throw new Error(`${prefix} first argument name must be a string`);
   if(typeof trigger !== 'number')
-    throw new Error(`${prefix} second argument date must be a Date`);
+	throw new Error(`${prefix} second argument date must be a Date`);
   if(interval && typeof interval !== 'number')
-    throw new Error(`${prefix} third argument interval, if provided, must be a number`);
+	throw new Error(`${prefix} third argument interval, if provided, must be a number`);
 
   let opts = { trigger: trigger };
   if(interval) {
-    opts.interval = interval;
+	opts.interval = interval;
   }
 
   return setAlarm(name, wakeup ? ELAPSED_REALTIME_WAKEUP : ELAPSED_REALTIME, opts);
@@ -43,22 +43,22 @@ const alarmSetRTC = (name, date, interval, wakeup) => {
 
   // Check argument types
   if(!(typeof name === 'string' || name instanceof String))
-    throw new Error(`${prefix} first argument name must be a string`);
+	throw new Error(`${prefix} first argument name must be a string`);
   if(!(date instanceof Date))
-    throw new Error(`${prefix} second argument date must be a Date`);
+	throw new Error(`${prefix} second argument date must be a Date`);
   if(interval && typeof interval != 'number')
-    throw new Error(`${prefix} third argument interval, if provided, must be a number or one of the provided constants`);
+	throw new Error(`${prefix} third argument interval, if provided, must be a number or one of the provided constants`);
 
   let opts = {
-    year: date.getFullYear(),
-    month: date.getMonth(),
-    date: date.getDate(),
-    minute: date.getMinutes(),
-    hour: date.getHours(),
-    second: date.getSeconds()
+	year: date.getFullYear(),
+	month: date.getMonth(),
+	date: date.getDate(),
+	minute: date.getMinutes(),
+	hour: date.getHours(),
+	second: date.getSeconds()
   };
   if(interval) {
-    opts.interval = interval;
+	opts.interval = interval;
   }
 
   return setAlarm(name, wakeup ? RTC_WAKEUP : RTC, opts);
@@ -70,7 +70,7 @@ const alarmSetRTCWakeup = (name, date, interval) => {
 
 const clearAlarm = (name) => {
   if(!(typeof name === 'string' || name instanceof String)) {
-    throw new Error('RNAlarms: clearAlarm first argument must be a string');
+	throw new Error('RNAlarms: clearAlarm first argument must be a string');
   }
 
   AlarmAndroid.clearAlarm(name);
@@ -78,7 +78,7 @@ const clearAlarm = (name) => {
 
 const alarmExists = (name) => {
   if(!(typeof name === 'string' || name instanceof String)) {
-    throw new Error('RNAlarms: alarmExists first argument must be a string');
+	throw new Error('RNAlarms: alarmExists first argument must be a string');
   }
 
   return AlarmAndroid.alarmExists(name);
