@@ -123,6 +123,22 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 		} else {
 			Log.i("RNAlarms", "No PendingIntent found for alarm '" + alarmName + "'");
 		}
+		this.clearOldAlarm(alarmName);
+	}
+
+	//Fixes bug introduced when the URI was changed to use id instead of http
+	private void clearOldAlarm(final String alarmName) {
+		Context context = this.getReactApplicationContext();
+		Intent intent = new Intent(context, AlarmRun.class);
+		intent.putExtra("name", alarmName);
+		intent.setAction(alarmName);
+		intent.setData(Uri.parse("id://" + alarmName));
+		PendingIntent pending = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_NO_CREATE);
+		if(pending != null) {
+			pending.cancel();
+			AlarmManager alarmManager = this.getAlarmManager();
+			alarmManager.cancel(pending);
+		}
 	}
 
 	private PendingIntent createPending(final String alarmName, final int flags) {
@@ -131,7 +147,7 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 		intent.putExtra("name", alarmName);
 		// This is so alarms may be cancelled
 		intent.setAction(alarmName);
-		intent.setData(Uri.parse("id://" + alarmName));
+		intent.setData(Uri.parse("http://" + alarmName));
 		return PendingIntent.getBroadcast(context, 0, intent, flags);
 	}
 

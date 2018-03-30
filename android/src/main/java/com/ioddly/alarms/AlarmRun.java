@@ -45,7 +45,8 @@ public class AlarmRun extends BroadcastReceiver {
 	}
 
 	private boolean isAlarmIntent(Intent intent) {
-		return !intent.getAction().contains("android.intent.action");
+		String action = intent.getAction();
+		return !(action.contains("android.intent.action") || action.contains("com.htc.intent.action"));
 	}
 
 	private boolean isReactContextReady() {
