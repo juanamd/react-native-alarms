@@ -3,6 +3,7 @@ package com.ioddly.alarms;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.util.Log;
@@ -58,7 +59,7 @@ public class AlarmRun extends BroadcastReceiver {
 		this.reactContext
 			.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
 			.emit(ALARM_FIRED_EVENT, this.createEventMap());
-		this.releaseWakeLock();
+		this.releaseWakeLock(5000);
 	}
 
 	private WritableMap createEventMap() {
@@ -98,15 +99,23 @@ public class AlarmRun extends BroadcastReceiver {
 	private void acquireWakeLock(final Context context) {
 		Log.i("RNAlarms", "Aquiring wakelock...");
 		PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-		this.wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TAG");
+		this.wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "RNAlarms");
 		this.wakelock.acquire();
 	}
 
-	private void releaseWakeLock() {
+	private void releaseWakeLock(final int delayMillis) {
 		if(this.wakelock != null && this.wakelock.isHeld()) {
-			Log.i("RNAlarms", "Releasing wakelock");
-			this.wakelock.release();
-			this.wakelock = null;
+			Log.i("RNAlarms", "Releasing wakelock in " + delayMillis + " milliseconds...");
+			new Handler().postDelayed(
+				new Runnable() {
+					public void run() {
+						wakelock.release();
+						wakelock = null;
+						Log.i("RNAlarms", "Wakelock released");
+					}
+				}, 
+				delayMillis
+			);
 		}
 	}
 
