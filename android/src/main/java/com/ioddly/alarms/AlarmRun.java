@@ -27,11 +27,12 @@ public class AlarmRun extends BroadcastReceiver {
 
 	@Override
 	public void onReceive(final Context context, Intent intent) {
+		if(this.isAlarmIntent(intent)) AlarmHelper.launchMainActivity(context);
+
 		this.alarmName = intent.hasExtra("name") ? intent.getStringExtra("name") : BOOT_EVENT;
 		this.reactManager = this.getReactManager(context);
 		this.reactContext = reactManager.getCurrentReactContext();
 
-		if(this.isAlarmIntent(intent)) AlarmHelper.launchMainActivity(context);
 		if(this.isReactContextReady()) this.emitJSAlarmEvent();
 		else {
 			this.addReactNativeInitializedListener();
@@ -40,8 +41,13 @@ public class AlarmRun extends BroadcastReceiver {
 		}
 	}
 
-	private ReactInstanceManager getReactManager(final Context context) {
-		ReactApplication reactApp = (ReactApplication) context.getApplicationContext();
+	private ReactInstanceManager getReactManager(final Context context) throws ClassCastException {
+		ReactApplication reactApp;
+		try {
+			reactApp = (ReactApplication) context.getApplicationContext();
+		} catch(ClassCastException exception) {
+			throw new ClassCastException("Unable to cast: " + context.getApplicationContext().getClass().getName() + " to ReactApplication");
+		}
 		return reactApp.getReactNativeHost().getReactInstanceManager();
 	}
 
