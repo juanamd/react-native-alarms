@@ -23,10 +23,12 @@ import java.util.Map;
 
 @ReactModule(name = "AlarmAndroid")
 public class AlarmModule extends ReactContextBaseJavaModule {
+
+	private static final String TAG = "RNAlarms";
 	
 	public AlarmModule(ReactApplicationContext reactContext) {
 		super(reactContext);
-		Log.i("RNAlarms", "AlarmModule initialized");
+		Log.d(TAG, "AlarmModule initialized");
 	}
 
 	@ReactMethod
@@ -34,7 +36,7 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 		long alarmMillis = SystemClock.elapsedRealtime() + triggerMillis;
 		this.setAlarm(AlarmManager.ELAPSED_REALTIME, alarmName, alarmMillis, intervalMillis);
 
-		Log.i("RNAlarms", "setElapsedRealtime. Name: " + alarmName + ", interval: " + intervalMillis + ", millis: " + alarmMillis);
+		Log.d(TAG, "setElapsedRealtime. Name: " + alarmName + ", interval: " + intervalMillis + ", millis: " + alarmMillis);
 	}
 
 	@ReactMethod
@@ -42,7 +44,7 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 		long alarmMillis = SystemClock.elapsedRealtime() + triggerMillis;
 		this.setAlarm(AlarmManager.ELAPSED_REALTIME_WAKEUP, alarmName, alarmMillis, intervalMillis);
 
-		Log.i("RNAlarms", "setElapsedRealtimeWakeup. Name: " + alarmName + ", interval: " + intervalMillis + ", millis: " + alarmMillis);
+		Log.d(TAG, "setElapsedRealtimeWakeup. Name: " + alarmName + ", interval: " + intervalMillis + ", millis: " + alarmMillis);
 	}
 
 	@ReactMethod
@@ -51,7 +53,7 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 		this.setAlarm(AlarmManager.RTC, alarmName, alarmMillis, intervalMillis);
 
 		String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(alarmMillis);
-		Log.i("RNAlarms", "setRTC. Name: " + alarmName + ", interval: " + intervalMillis + " at: " + date);
+		Log.d(TAG, "setRTC. Name: " + alarmName + ", interval: " + intervalMillis + " at: " + date);
 	}
 
 	@ReactMethod
@@ -60,7 +62,7 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 		this.setAlarm(AlarmManager.RTC_WAKEUP, alarmName, alarmMillis, intervalMillis);
 
 		String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(alarmMillis);
-		Log.i("RNAlarms", "setRTCWakeup. Name: " + alarmName + ", interval: " + intervalMillis + " at: " + date);
+		Log.d(TAG, "setRTCWakeup. Name: " + alarmName + ", interval: " + intervalMillis + " at: " + date);
 	}
 
 	private void setAlarm(final int type, final String alarmName, final long alarmMillis, final int intervalMillis) {
@@ -70,8 +72,8 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 	}
 
 	private PendingIntent getAlarmPendingIntent(final String alarmName) {
-		if(isExistingAlarm(alarmName)) {
-			Log.i("RNAlarms", "PendingIntent already exists for alarm '" + alarmName + "'; updating!");
+		if (isExistingAlarm(alarmName)) {
+			Log.d(TAG, "PendingIntent already exists for alarm '" + alarmName + "'; updating!");
 			this.clearAlarm(alarmName);
 			return createPending(alarmName, PendingIntent.FLAG_UPDATE_CURRENT);
 		} else {
@@ -79,12 +81,12 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 		}
 	}
 
-	private void setRepeatingAlarm(int type, long alarmMillis, int intervalMillis, PendingIntent pending) {
+	private void setRepeatingAlarm(final int type, final long alarmMillis, final int intervalMillis, final PendingIntent pending) {
 		AlarmManager alarmManager = this.getAlarmManager();
 		alarmManager.setInexactRepeating(type, alarmMillis, intervalMillis, pending);
 	}
 
-	private void setNonRepeatingAlarm(int type, long alarmMillis, PendingIntent pending) {
+	private void setNonRepeatingAlarm(final int type, final long alarmMillis, final PendingIntent pending) {
 		AlarmManager alarmManager = this.getAlarmManager();
 
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -103,9 +105,13 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 
 	@ReactMethod
 	public void alarmExists(final String alarmName, final Promise promise) {
-		WritableArray args =  Arguments.createArray();
-		args.pushBoolean(isExistingAlarm(alarmName));
-		promise.resolve(args);
+		try {
+			WritableArray args =  Arguments.createArray();
+			args.pushBoolean(isExistingAlarm(alarmName));
+			promise.resolve(args);
+		} catch (Exception e) {
+			promise.reject(e);
+		}
 	}
 
 	private boolean isExistingAlarm(final String alarmName) {
@@ -114,30 +120,14 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 
 	@ReactMethod
 	public void clearAlarm(final String alarmName) {
-		Log.i("RNAlarms", "Clearing alarm '" + alarmName + "'");
+		Log.d(TAG, "Clearing alarm '" + alarmName + "'");
 		PendingIntent pending = this.createPending(alarmName, PendingIntent.FLAG_NO_CREATE);
-		if(pending != null) {
+		if (pending != null) {
 			pending.cancel();
 			AlarmManager alarmManager = this.getAlarmManager();
 			alarmManager.cancel(pending);
 		} else {
-			Log.i("RNAlarms", "No PendingIntent found for alarm '" + alarmName + "'");
-		}
-		this.clearOldAlarm(alarmName);
-	}
-
-	//Fixes bug introduced when the URI was changed to use id instead of http
-	private void clearOldAlarm(final String alarmName) {
-		Context context = this.getReactApplicationContext();
-		Intent intent = new Intent(context, AlarmRun.class);
-		intent.putExtra("name", alarmName);
-		intent.setAction(alarmName);
-		intent.setData(Uri.parse("id://" + alarmName));
-		PendingIntent pending = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_NO_CREATE);
-		if(pending != null) {
-			pending.cancel();
-			AlarmManager alarmManager = this.getAlarmManager();
-			alarmManager.cancel(pending);
+			Log.d(TAG, "No PendingIntent found for alarm '" + alarmName + "'");
 		}
 	}
 
@@ -175,6 +165,9 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 		constants.put("INTERVAL_HOUR", AlarmManager.INTERVAL_HOUR);
 		constants.put("INTERVAL_DAY", AlarmManager.INTERVAL_DAY);
 		constants.put("INTERVAL_HALF_DAY", AlarmManager.INTERVAL_HALF_DAY);
+
+		constants.put("ALARM_FIRED_EVENT", AlarmHelper.ALARM_FIRED_EVENT);
+		constants.put("DEFAULT_EVENT", AlarmHelper.DEFAULT_EVENT);
 
 		return constants;
 	}

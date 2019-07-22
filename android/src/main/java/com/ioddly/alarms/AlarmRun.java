@@ -17,8 +17,8 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 public class AlarmRun extends BroadcastReceiver {
 	
-	public static String BOOT_EVENT = "@boot";
-	public static String ALARM_FIRED_EVENT = "alarmFired";
+	private static final String TAG = "RNAlarms";
+	private static final long WAKELOCK_TIMEOUT = 15000;
 
 	private String alarmName;
 	private ReactInstanceManager reactManager;
@@ -26,56 +26,57 @@ public class AlarmRun extends BroadcastReceiver {
 	private WakeLock wakelock;
 
 	@Override
-	public void onReceive(final Context context, Intent intent) {
-		if(this.isAlarmIntent(intent)) AlarmHelper.launchMainActivity(context);
-
-		this.alarmName = intent.hasExtra("name") ? intent.getStringExtra("name") : BOOT_EVENT;
-		this.reactManager = this.getReactManager(context);
-		this.reactContext = reactManager.getCurrentReactContext();
-
-		if(this.isReactContextReady()) this.emitJSAlarmEvent();
-		else {
-			this.addReactNativeInitializedListener();
-			this.createReactContextIfNecessary();
-			if (this.isAlarmIntent(intent)) this.acquireWakeLock(context);
+	public void onReceive(final Context context, final Intent intent) {
+		if (this.isAlarmIntent(intent)) AlarmHelper.launchMainActivity(context);
+		try {
+			this.alarmName = intent.hasExtra("name") ? intent.getStringExtra("name") : null;
+			this.reactManager = this.getReactManager(context);
+			this.reactContext = this.reactManager.getCurrentReactContext();
+			if (this.isReactContextReady()) this.emitJSModuleEvent();
+			else {
+				this.addReactNativeInitializedListener();
+				this.createReactContextIfNecessary();
+				if (this.isAlarmIntent(intent)) this.acquireWakeLock(context);
+			}
+		} catch (ClassCastException e) {
+			Log.e(TAG, "Unable to cast: " + context.getApplicationContext().getClass().getName() + " to ReactApplication", e);
 		}
 	}
 
-	private ReactInstanceManager getReactManager(final Context context) throws ClassCastException {
-		ReactApplication reactApp;
-		try {
-			reactApp = (ReactApplication) context.getApplicationContext();
-		} catch(ClassCastException exception) {
-			throw new ClassCastException("Unable to cast: " + context.getApplicationContext().getClass().getName() + " to ReactApplication");
-		}
+	private ReactInstanceManager getReactManager(final Context context) {
+		ReactApplication reactApp = (ReactApplication) context.getApplicationContext();
 		return reactApp.getReactNativeHost().getReactInstanceManager();
 	}
 
-	private boolean isAlarmIntent(Intent intent) {
+	private boolean isAlarmIntent(final Intent intent) {
 		String action = intent.getAction();
-		return !(action.contains("android.intent.action") || action.contains("com.htc.intent.action"));
+		if (action != null && intent.getData() != null && intent.hasExtra("name")) {
+			return action.equals(intent.getStringExtra("name"));
+		}
+		return false;
 	}
 
 	private boolean isReactContextReady() {
 		return (this.reactContext != null && this.reactContext.hasActiveCatalystInstance());
 	}
 
-	private void emitJSAlarmEvent() {
-		Log.i("RNAlarms", "Firing alarm '" + this.alarmName + "'");
+	private void emitJSModuleEvent() {
+		final String eventName = (this.alarmName != null) ? AlarmHelper.ALARM_FIRED_EVENT : AlarmHelper.DEFAULT_EVENT;
+		Log.d(TAG, "Emiting event '" + eventName + "' for alarm '" + this.alarmName + "'");
 		this.reactContext
 			.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-			.emit(ALARM_FIRED_EVENT, this.createEventMap());
+			.emit(eventName, this.createEventMap());
 		this.releaseWakeLock(5000);
 	}
 
 	private WritableMap createEventMap() {
 		WritableMap map = Arguments.createMap();
-		map.putString("alarmName", this.alarmName);
+		if (this.alarmName != null) map.putString("alarmName", this.alarmName);
 		return map;
 	}
 
 	private void addReactNativeInitializedListener() {
-		Log.i("RNAlarms", "Application is closed; attempting to launch and fire alarm '" + this.alarmName + "'");
+		Log.d(TAG, "Application is closed; attempting to launch and fire alarm '" + this.alarmName + "'");
 		final AlarmRun self = this;
 		this.reactManager.addReactInstanceEventListener(new ReactInstanceManager.ReactInstanceEventListener() {
 			public void onReactContextInitialized(ReactContext reactContext) {
@@ -84,40 +85,48 @@ public class AlarmRun extends BroadcastReceiver {
 		});
 	}
 
-	public void onReactContextInitialized(ReactContext reactContext) {
+	public void onReactContextInitialized(final ReactContext reactContext) {
 		this.reactContext = reactContext;
-		if(this.isReactContextReady()) this.emitJSAlarmEvent();
+		if (this.isReactContextReady()) this.emitJSModuleEvent();
 		else {
-			//Wait 2 seconds and try again
+			//Wait 3 seconds and try again
 			try {
-				Thread.sleep(2000);
-				if(this.isReactContextReady()) this.emitJSAlarmEvent();
-			} catch(Exception exception) {
+				Thread.sleep(3000);
+				if (this.isReactContextReady()) this.emitJSModuleEvent();
+			} catch (Exception exception) {
 				Thread.currentThread().interrupt();
 			}
 		}
 	}
 
 	private void createReactContextIfNecessary() {
-		if(!this.reactManager.hasStartedCreatingInitialContext()) this.reactManager.createReactContextInBackground();
+		if (!this.reactManager.hasStartedCreatingInitialContext()) this.reactManager.createReactContextInBackground();
 	}
 
 	private void acquireWakeLock(final Context context) {
-		Log.i("RNAlarms", "Aquiring wakelock...");
-		PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-		this.wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "RNAlarms");
-		this.wakelock.acquire();
+		Log.d(TAG, "Acquiring wakelock...");
+		try {
+			PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+			this.wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
+			this.wakelock.acquire(WAKELOCK_TIMEOUT);
+		} catch (Exception e) {
+			Log.e(TAG, "acquireWakeLock(): Error acquiring wakeLock", e);
+		}
 	}
 
 	private void releaseWakeLock(final int delayMillis) {
-		if(this.wakelock != null && this.wakelock.isHeld()) {
-			Log.i("RNAlarms", "Releasing wakelock in " + delayMillis + " milliseconds...");
+		if (this.wakelock != null) {
+			Log.d(TAG, "Releasing wakelock in " + delayMillis + " milliseconds...");
 			new Handler().postDelayed(
 				new Runnable() {
 					public void run() {
-						wakelock.release();
-						wakelock = null;
-						Log.i("RNAlarms", "Wakelock released");
+						try {
+							if (wakelock.isHeld()) wakelock.release();
+							wakelock = null;
+							Log.d(TAG, "releaseWakeLock(): Wakelock released");
+						} catch (Exception e) {
+							Log.e(TAG, "releaseWakeLock(): Wakelock release error", e);
+						}
 					}
 				}, 
 				delayMillis
