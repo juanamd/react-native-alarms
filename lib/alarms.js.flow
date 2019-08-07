@@ -27,8 +27,16 @@ class Alarms {
 		AlarmAndroid.clearAlarm(alarmName);
 	}
 
-	async alarmExists(alarmName: string) {
+	async alarmExists(alarmName: string): Promise<boolean> {
 		return await AlarmAndroid.alarmExists(alarmName);
+	}
+
+	async getPersistedAlarmName(): Promise<string | void> {
+		return await AlarmAndroid.getPersistedAlarmName();
+	}
+
+	async clearPersistedAlarmName(): Promise<void> {
+		await AlarmAndroid.clearPersistedAlarmName();
 	}
 }
 

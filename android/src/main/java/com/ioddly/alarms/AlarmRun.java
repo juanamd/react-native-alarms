@@ -3,6 +3,8 @@ package com.ioddly.alarms;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.os.Handler;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
@@ -30,6 +32,8 @@ public class AlarmRun extends BroadcastReceiver {
 		if (this.isAlarmIntent(intent)) AlarmHelper.launchMainActivity(context);
 		try {
 			this.alarmName = intent.hasExtra("name") ? intent.getStringExtra("name") : null;
+			if (this.alarmName != null) this.persistAlarmName(context);
+
 			this.reactManager = this.getReactManager(context);
 			this.reactContext = this.reactManager.getCurrentReactContext();
 			if (this.isReactContextReady()) this.emitJSModuleEvent();
@@ -41,6 +45,13 @@ public class AlarmRun extends BroadcastReceiver {
 		} catch (ClassCastException e) {
 			Log.e(TAG, "Unable to cast: " + context.getApplicationContext().getClass().getName() + " to ReactApplication", e);
 		}
+	}
+
+	private void persistAlarmName(final Context context) {
+		SharedPreferences prefs = context.getSharedPreferences(TAG, Context.MODE_PRIVATE); 
+		Editor editor = prefs.edit();
+		editor.putString(AlarmHelper.ALARM_NAME, this.alarmName);
+		editor.apply();
 	}
 
 	private ReactInstanceManager getReactManager(final Context context) {
@@ -77,26 +88,18 @@ public class AlarmRun extends BroadcastReceiver {
 
 	private void addReactNativeInitializedListener() {
 		Log.d(TAG, "Application is closed; attempting to launch and fire alarm '" + this.alarmName + "'");
-		final AlarmRun self = this;
-		this.reactManager.addReactInstanceEventListener(new ReactInstanceManager.ReactInstanceEventListener() {
-			public void onReactContextInitialized(ReactContext reactContext) {
-				self.onReactContextInitialized(reactContext);
+		this.reactManager.addReactInstanceEventListener(
+			new ReactInstanceManager.ReactInstanceEventListener() {
+				public void onReactContextInitialized(ReactContext newContext) {
+					try {
+						reactContext = newContext;
+						if (isReactContextReady()) emitJSModuleEvent();
+					} catch (Exception e) {
+						Log.e(TAG, "onReactContextInitialized(): Error emiting JS event", e);
+					}
+				}
 			}
-		});
-	}
-
-	public void onReactContextInitialized(final ReactContext reactContext) {
-		this.reactContext = reactContext;
-		if (this.isReactContextReady()) this.emitJSModuleEvent();
-		else {
-			//Wait 3 seconds and try again
-			try {
-				Thread.sleep(3000);
-				if (this.isReactContextReady()) this.emitJSModuleEvent();
-			} catch (Exception exception) {
-				Thread.currentThread().interrupt();
-			}
-		}
+		);
 	}
 
 	private void createReactContextIfNecessary() {

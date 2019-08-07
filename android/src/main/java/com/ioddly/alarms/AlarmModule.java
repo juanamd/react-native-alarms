@@ -4,17 +4,17 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
 import android.util.Log;
 
-import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
-import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.module.annotations.ReactModule;
 
 import java.text.SimpleDateFormat;
@@ -106,9 +106,8 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 	@ReactMethod
 	public void alarmExists(final String alarmName, final Promise promise) {
 		try {
-			WritableArray args =  Arguments.createArray();
-			args.pushBoolean(isExistingAlarm(alarmName));
-			promise.resolve(args);
+			boolean exists = isExistingAlarm(alarmName);
+			promise.resolve(exists);
 		} catch (Exception e) {
 			promise.reject(e);
 		}
@@ -144,6 +143,32 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 	@ReactMethod
 	public void launchMainActivity() {
 		AlarmHelper.launchMainActivity(this.getReactApplicationContext());
+	}
+
+	@ReactMethod
+	public void getPersistedAlarmName(Promise promise) {
+		try {
+			SharedPreferences prefs = getReactApplicationContext().getSharedPreferences(TAG, Context.MODE_PRIVATE);
+			String alarmName = prefs.getString(AlarmHelper.ALARM_NAME, null);
+			promise.resolve(alarmName);
+		} catch (Exception e) {
+			promise.reject(e);
+			Log.e(TAG, "Error while getting persisted alarm name", e);
+		}
+	}
+
+	@ReactMethod
+	public void clearPersistedAlarmName(Promise promise) {
+		try {
+			SharedPreferences prefs = getReactApplicationContext().getSharedPreferences(TAG, Context.MODE_PRIVATE);
+			Editor editor = prefs.edit();
+			editor.remove(AlarmHelper.ALARM_NAME);
+			editor.apply();
+			promise.resolve(null);
+		} catch (Exception e) {
+			promise.reject(e);
+			Log.e(TAG, "Error while getting persisted alarm name", e);
+		}
 	}
 
 	@Override
