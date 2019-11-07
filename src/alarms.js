@@ -38,6 +38,10 @@ class Alarms {
 	async clearPersistedAlarmName(): Promise<void> {
 		await AlarmAndroid.clearPersistedAlarmName();
 	}
+
+	async clearAlarmNotification(): Promise<void> {
+		await AlarmAndroid.clearAlarmNotification();
+	}
 }
 
 export default new Alarms();

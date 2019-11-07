@@ -171,6 +171,17 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 		}
 	}
 
+	@ReactMethod
+	public void clearAlarmNotification(Promise promise) {
+		try {
+			NotificationHelper.clearNotification(getReactApplicationContext());
+			promise.resolve(null);
+		} catch (Exception e) {
+			promise.reject(e);
+			Log.e(TAG, "Error clearing notification", e);
+		}
+	}
+
 	@Override
 	public String getName() {
 		return "AlarmAndroid";
