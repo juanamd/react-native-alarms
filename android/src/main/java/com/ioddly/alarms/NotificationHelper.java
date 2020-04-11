@@ -18,7 +18,8 @@ public class NotificationHelper {
 
 	static void notifyWithFullScreenIntent(final Context context, final Intent fullScreenIntent, final String title) {
 		PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(context, 0, fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-
+		NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+		createNotificationChannelIfNeeded(manager);
 		NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
 			.setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
 			.setContentTitle(title)
@@ -27,9 +28,7 @@ public class NotificationHelper {
 			.setPriority(NotificationCompat.PRIORITY_MAX)
 			.setCategory(NotificationCompat.CATEGORY_ALARM)
 			.setFullScreenIntent(fullScreenPendingIntent, true);
-
-		NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-		createNotificationChannelIfNeeded(manager);
+		
 		manager.notify(NOTIFICATION_CHANNEL_ID, 0, notificationBuilder.build());
 	}
 
