@@ -31,6 +31,10 @@ class Alarms {
 		return AlarmAndroid.alarmExists(alarmName);
 	}
 
+	static launchMainActivity(): Promise<void> {
+		return AlarmAndroid.launchMainActivity();
+	}
+
 	static getPersistedAlarmName(): Promise<string | void> {
 		return AlarmAndroid.getPersistedAlarmName();
 	}
