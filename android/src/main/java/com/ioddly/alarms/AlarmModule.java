@@ -32,46 +32,62 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 	}
 
 	@ReactMethod
-	public void setElapsedRealtime(final String alarmName, final int triggerMillis, final int intervalMillis) {
-		long alarmMillis = SystemClock.elapsedRealtime() + triggerMillis;
-		this.setAlarm(AlarmManager.ELAPSED_REALTIME, alarmName, alarmMillis, intervalMillis);
-
-		Log.d(TAG, "setElapsedRealtime. Name: " + alarmName + ", interval: " + intervalMillis + ", millis: " + alarmMillis);
+	public void setElapsedRealtime(String alarmName, int triggerMillis, int intervalMillis, Promise promise) {
+		try {
+			long alarmMillis = SystemClock.elapsedRealtime() + triggerMillis;
+			this.setAlarm(AlarmManager.ELAPSED_REALTIME, alarmName, alarmMillis, intervalMillis);
+			promise.resolve(null);
+			Log.d(TAG, "setElapsedRealtime. Name: " + alarmName + ", interval: " + intervalMillis + ", millis: " + alarmMillis);
+		} catch (Exception e) {
+			promise.reject(e);
+		}
 	}
 
 	@ReactMethod
-	public void setElapsedRealtimeWakeup(final String alarmName, final int triggerMillis, final int intervalMillis) {
-		long alarmMillis = SystemClock.elapsedRealtime() + triggerMillis;
-		this.setAlarm(AlarmManager.ELAPSED_REALTIME_WAKEUP, alarmName, alarmMillis, intervalMillis);
-
-		Log.d(TAG, "setElapsedRealtimeWakeup. Name: " + alarmName + ", interval: " + intervalMillis + ", millis: " + alarmMillis);
+	public void setElapsedRealtimeWakeup(String alarmName, int triggerMillis, int intervalMillis, Promise promise) {
+		try {
+			long alarmMillis = SystemClock.elapsedRealtime() + triggerMillis;
+			this.setAlarm(AlarmManager.ELAPSED_REALTIME_WAKEUP, alarmName, alarmMillis, intervalMillis);
+			promise.resolve(null);
+			Log.d(TAG, "setElapsedRealtimeWakeup. Name: " + alarmName + ", interval: " + intervalMillis + ", millis: " + alarmMillis);
+		} catch (Exception e) {
+			promise.reject(e);
+		}
 	}
 
 	@ReactMethod
-	public void setRTC(final String alarmName, final String alarmMillisString, final int intervalMillis) {
-		long alarmMillis = Long.parseLong(alarmMillisString, 10);
-		this.setAlarm(AlarmManager.RTC, alarmName, alarmMillis, intervalMillis);
-
-		String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(alarmMillis);
-		Log.d(TAG, "setRTC. Name: " + alarmName + ", interval: " + intervalMillis + " at: " + date);
+	public void setRTC(String alarmName, String alarmMillisString, int intervalMillis, Promise promise) {
+		try {
+			long alarmMillis = Long.parseLong(alarmMillisString, 10);
+			this.setAlarm(AlarmManager.RTC, alarmName, alarmMillis, intervalMillis);
+			promise.resolve(null);
+			String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(alarmMillis);
+			Log.d(TAG, "setRTC. Name: " + alarmName + ", interval: " + intervalMillis + " at: " + date);
+		} catch (Exception e) {
+			promise.reject(e);
+		}
 	}
 
 	@ReactMethod
-	public void setRTCWakeup(final String alarmName, final String alarmMillisString, final int intervalMillis) {
-		long alarmMillis = Long.parseLong(alarmMillisString, 10);
-		this.setAlarm(AlarmManager.RTC_WAKEUP, alarmName, alarmMillis, intervalMillis);
-
-		String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(alarmMillis);
-		Log.d(TAG, "setRTCWakeup. Name: " + alarmName + ", interval: " + intervalMillis + " at: " + date);
+	public void setRTCWakeup(String alarmName, String alarmMillisString, int intervalMillis, Promise promise) {
+		try {
+			long alarmMillis = Long.parseLong(alarmMillisString, 10);
+			this.setAlarm(AlarmManager.RTC_WAKEUP, alarmName, alarmMillis, intervalMillis);
+			promise.resolve(null);
+			String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(alarmMillis);
+			Log.d(TAG, "setRTCWakeup. Name: " + alarmName + ", interval: " + intervalMillis + " at: " + date);
+		} catch (Exception e) {
+			promise.reject(e);
+		}
 	}
 
-	private void setAlarm(final int type, final String alarmName, final long alarmMillis, final int intervalMillis) {
+	private void setAlarm(int type, String alarmName, long alarmMillis, int intervalMillis) {
 		PendingIntent pending = this.getAlarmPendingIntent(alarmName);
 		if (intervalMillis != 0) this.setRepeatingAlarm(type, alarmMillis, intervalMillis, pending);
 		else this.setNonRepeatingAlarm(type, alarmMillis, pending);
 	}
 
-	private PendingIntent getAlarmPendingIntent(final String alarmName) {
+	private PendingIntent getAlarmPendingIntent(String alarmName) {
 		if (isExistingAlarm(alarmName)) {
 			Log.d(TAG, "PendingIntent already exists for alarm '" + alarmName + "'; updating!");
 			this.clearAlarm(alarmName);
@@ -81,14 +97,13 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 		}
 	}
 
-	private void setRepeatingAlarm(final int type, final long alarmMillis, final int intervalMillis, final PendingIntent pending) {
+	private void setRepeatingAlarm(int type, long alarmMillis, int intervalMillis, PendingIntent pending) {
 		AlarmManager alarmManager = this.getAlarmManager();
 		alarmManager.setInexactRepeating(type, alarmMillis, intervalMillis, pending);
 	}
 
-	private void setNonRepeatingAlarm(final int type, final long alarmMillis, final PendingIntent pending) {
+	private void setNonRepeatingAlarm(int type, long alarmMillis, PendingIntent pending) {
 		AlarmManager alarmManager = this.getAlarmManager();
-
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 			alarmManager.setAlarmClock(new AlarmManager.AlarmClockInfo(alarmMillis, pending), pending);
 		} else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
@@ -104,7 +119,7 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 	}
 
 	@ReactMethod
-	public void alarmExists(final String alarmName, final Promise promise) {
+	public void alarmExists(String alarmName, Promise promise) {
 		try {
 			boolean exists = isExistingAlarm(alarmName);
 			promise.resolve(exists);
@@ -113,24 +128,29 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 		}
 	}
 
-	private boolean isExistingAlarm(final String alarmName) {
+	private boolean isExistingAlarm(String alarmName) {
 		return this.createPending(alarmName, PendingIntent.FLAG_NO_CREATE) != null;
 	}
 
 	@ReactMethod
-	public void clearAlarm(final String alarmName) {
-		Log.d(TAG, "Clearing alarm '" + alarmName + "'");
-		PendingIntent pending = this.createPending(alarmName, PendingIntent.FLAG_NO_CREATE);
-		if (pending != null) {
-			pending.cancel();
-			AlarmManager alarmManager = this.getAlarmManager();
-			alarmManager.cancel(pending);
-		} else {
-			Log.d(TAG, "No PendingIntent found for alarm '" + alarmName + "'");
+	public void clearAlarm(String alarmName, Promise promise) {
+		try {
+			Log.d(TAG, "Clearing alarm '" + alarmName + "'");
+			PendingIntent pending = this.createPending(alarmName, PendingIntent.FLAG_NO_CREATE);
+			if (pending != null) {
+				pending.cancel();
+				AlarmManager alarmManager = this.getAlarmManager();
+				alarmManager.cancel(pending);
+			} else {
+				Log.d(TAG, "No PendingIntent found for alarm '" + alarmName + "'");
+			}
+			promise.resolve(null);
+		} catch (Exception e) {
+			promise.reject(e);
 		}
 	}
 
-	private PendingIntent createPending(final String alarmName, final int flags) {
+	private PendingIntent createPending(String alarmName, int flags) {
 		Context context = this.getReactApplicationContext();
 		Intent intent = new Intent(context, AlarmRun.class);
 		intent.putExtra("name", alarmName);
@@ -141,8 +161,13 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 	}
 
 	@ReactMethod
-	public void launchMainActivity() {
-		AlarmHelper.launchMainActivity(this.getReactApplicationContext());
+	public void launchMainActivity(Promise promise) {
+		try {
+			AlarmHelper.launchMainActivity(this.getReactApplicationContext());
+			promise.resolve(null);
+		} catch (Exception e) {
+			promise.reject(e);
+		}
 	}
 
 	@ReactMethod
