@@ -1,6 +1,6 @@
 {
   "name": "react-native-alarms",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "React Native library for interacting with Android alarms.",
   "keywords": [
     "react-native",
@@ -11,6 +11,7 @@
   "author": "ioddly",
   "license": "MIT",
   "main": "lib/alarms.js",
+  "types": "types/alarms.d.ts",
   "scripts": {
     "build": "babel src/ -d lib/ && flow-copy-source src lib",
     "prepublish": "yarn run build"
