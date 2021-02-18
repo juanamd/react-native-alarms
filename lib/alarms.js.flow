@@ -27,6 +27,10 @@ class Alarms {
 		return AlarmAndroid.clearAlarm(alarmName);
 	}
 
+	static clearAlarms(alarmNames: string[]): Promise<void> {
+		return AlarmAndroid.clearAlarms(alarmNames);
+	}
+
 	static alarmExists(alarmName: string): Promise<boolean> {
 		return AlarmAndroid.alarmExists(alarmName);
 	}

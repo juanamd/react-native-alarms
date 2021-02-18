@@ -7,6 +7,7 @@ declare module "react-native-alarms" {
 		static setRTC(alarmName: string, fireDate: Date, intervalMillis?: number): Promise<void>;
 		static setRTCWakeup(alarmName: string, fireDate: Date, intervalMillis?: number): Promise<void>;
 		static clearAlarm(alarmName: string): Promise<void>;
+		static clearAlarms(alarmNames: string[]): Promise<void>
 		static alarmExists(alarmName: string): Promise<boolean>;
 		static launchMainActivity(): Promise<void>;
 		static getPersistedAlarmName(): Promise<string | undefined>;

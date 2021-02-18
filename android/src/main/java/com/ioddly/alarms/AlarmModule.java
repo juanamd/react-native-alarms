@@ -15,6 +15,7 @@ import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.module.annotations.ReactModule;
 
 import java.text.SimpleDateFormat;
@@ -90,7 +91,7 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 	private PendingIntent getAlarmPendingIntent(String alarmName) {
 		if (isExistingAlarm(alarmName)) {
 			Log.d(TAG, "PendingIntent already exists for alarm '" + alarmName + "'; updating!");
-			this.clearAlarm(alarmName);
+			this.tryClearAlarm(alarmName);
 			return createPending(alarmName, PendingIntent.FLAG_UPDATE_CURRENT);
 		} else {
 			return createPending(alarmName, 0);
@@ -135,19 +136,35 @@ public class AlarmModule extends ReactContextBaseJavaModule {
 	@ReactMethod
 	public void clearAlarm(String alarmName, Promise promise) {
 		try {
-			Log.d(TAG, "Clearing alarm '" + alarmName + "'");
-			PendingIntent pending = this.createPending(alarmName, PendingIntent.FLAG_NO_CREATE);
-			if (pending != null) {
-				pending.cancel();
-				AlarmManager alarmManager = this.getAlarmManager();
-				alarmManager.cancel(pending);
-			} else {
-				Log.d(TAG, "No PendingIntent found for alarm '" + alarmName + "'");
-			}
+			boolean result = tryClearAlarm(alarmName);
+			if (result) Log.d(TAG, "Cleared alarm '" + alarmName + "'");
+			else Log.d(TAG, "No PendingIntent found for alarm '" + alarmName + "'");
 			promise.resolve(null);
 		} catch (Exception e) {
 			promise.reject(e);
 		}
+	}
+
+	@ReactMethod
+	public void clearAlarms(ReadableArray alarmNames, Promise promise) {
+		try {
+			for (int i = 0; i < alarmNames.size(); i++) {
+				tryClearAlarm(alarmNames.getString(i));
+			}
+			promise.resolve(null);
+			Log.d(TAG, "Cleared alarms");
+		} catch (Exception e) {
+			promise.reject(e);
+		}
+	}
+
+	private boolean tryClearAlarm(String alarmName) {
+		PendingIntent pending = this.createPending(alarmName, PendingIntent.FLAG_NO_CREATE);
+		if (pending == null) return false;
+		pending.cancel();
+		AlarmManager alarmManager = this.getAlarmManager();
+		alarmManager.cancel(pending);
+		return true;
 	}
 
 	private PendingIntent createPending(String alarmName, int flags) {
